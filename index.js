@@ -6,6 +6,11 @@ import QRCode from "qrcode";
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+// isključi cache na ruti /generate
+app.use('/generate', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 
 app.post("/generate", async (req, res) => {
   const { amount, orderId } = req.body;
