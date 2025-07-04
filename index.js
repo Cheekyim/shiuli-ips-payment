@@ -1,54 +1,68 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import QRCode from "qrcode";
+import axios from "axios";
 
 const app = express();
 
-// 1) Dozvoli CORS sa svih origin, ili target origin
-app.use(cors({ origin: '*' }));
+// CORS i body parser
+app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 
-// 2) Dozvoli iframe embedding i isključi cache za /generate
-app.use((req, res, next) => {
-  res.setHeader('X-Frame-Options', 'ALLOWALL');
-  next();
-});
-app.use('/generate', (req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store');
-  next();
-});
-
-// 3) Endpoint za generisanje QR koda i vraćanje payload URL-a
-app.post('/generate', async (req, res) => {
+// POST /generate - glavni endpoint za frontend
+app.post("/generate", async (req, res) => {
   const { amount, orderId } = req.body;
 
   if (!amount || !orderId) {
-    return res.status(400).json({ error: 'Missing amount or orderId' });
+    return res.status(400).json({ error: "Missing amount or orderId" });
   }
-
-  // Generiši payload URL sa parametrima
-  const payload =
-    `https://ips.pgw.payten.com:9092/payment-request?tid=SHIULI01&merchantid=123456&amount=${encodeURIComponent(
-      amount
-    )}&orderId=${encodeURIComponent(orderId)}&checksum=PLACEHOLDER`;
 
   try {
-    // Generiši QR code kao base64 Data URL
-    const qr = await QRCode.toDataURL(payload);
-    // Uvek vraćaj JSON telo sa payload i qr
-    return res.status(200).json({ payload, qr });
+    // 1. Generiši session token
+    const tokenResponse = await axios.post(
+      "https://payten-test-server.com/res/v1/generateToken",
+      {
+        userId: "testUser",
+        tid: "TID12345"
+      }
+    );
+
+    const sessionToken = tokenResponse.data.sessionToken;
+
+    // 2. Kreiraj eCommerce zahtev sa tokenom
+    const ecommerceResponse = await axios.post(
+      "https://payten-test-server.com/ips/v2/eCommerce",
+      {
+        tid: "TID12345",
+        amount: amount.toFixed(2),
+        orderId: orderId,
+        successSiteURL: "https://shiuli.rs/placanje-uspesno",
+        failSiteURL: "https://shiuli.rs/placanje-neuspesno",
+        cancelSiteURL: "https://shiuli.rs/placanje-otkazano"
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const qrCodeURL = ecommerceResponse.data.qrCodeURL;
+
+    // Vrati QR kod URL nazad frontend-u
+    return res.status(200).json({ qrCodeURL });
   } catch (err) {
-    console.error('QR generation error:', err);
-    return res.status(500).json({ error: 'Failed to generate QR code' });
+    console.error("Greška:", err.message);
+    return res.status(500).json({ error: "Greška pri komunikaciji sa Payten API-jem" });
   }
 });
 
-// 4) Health check endpoint
-app.get('/', (req, res) => {
-  res.send('Shiuli IPS backend aktivan');
+// GET / - health check
+app.get("/", (req, res) => {
+  res.send("Shiuli IPS backend je aktivan.");
 });
 
-// 5) Pokreni server
+// Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server pokrenut na portu ${PORT}`));
