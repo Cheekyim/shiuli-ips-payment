@@ -22,8 +22,8 @@ app.post("/generate", async (req, res) => {
     const tokenResponse = await axios.post(
       "https://ips.pgw.payten.com:9092/res/v1/generateToken",
       {
-        userId: "testUser",
-        tid: "TID12345"
+        userId: "papkivwrwzvcxrqzcpotcpxbyquqjjsriyyshrgrmogyyjxajuuoamnnrkbsepif",
+        tid: "SHIULI01"
       }
     );
 
@@ -33,7 +33,7 @@ app.post("/generate", async (req, res) => {
     const ecommerceResponse = await axios.post(
       "https://ips.pgw.payten.com:9092/ips/v2/eCommerce",
       {
-        tid: "TID12345",
+        tid: "SHIULI01",
         amount: amount.toFixed(2),
         orderId: orderId,
         successSiteURL: "https://shiuli.rs/placanje-uspesno",
