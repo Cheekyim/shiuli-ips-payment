@@ -20,7 +20,7 @@ app.post("/generate", async (req, res) => {
   try {
     // 1. Generiši session token
     const tokenResponse = await axios.post(
-      "https://payten-test-server.com/res/v1/generateToken",
+      "https://ips.pgw.payten.com:9092/res/v1/generateToken",
       {
         userId: "testUser",
         tid: "TID12345"
@@ -31,7 +31,7 @@ app.post("/generate", async (req, res) => {
 
     // 2. Kreiraj eCommerce zahtev sa tokenom
     const ecommerceResponse = await axios.post(
-      "https://payten-test-server.com/ips/v2/eCommerce",
+      "https://ips.pgw.payten.com:9092/ips/v2/eCommerce",
       {
         tid: "TID12345",
         amount: amount.toFixed(2),
